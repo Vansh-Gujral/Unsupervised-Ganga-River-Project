@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.streamlit/
+.cache/
+*.csv
+!RealisticSatelliteClusterData.csv   # keep your dataset
+env/
+venv/
+.venv/
+.DS_Store
+Thumbs.db
