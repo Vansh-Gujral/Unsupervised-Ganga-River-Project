@@ -1,0 +1,11 @@
+streamlit==1.31.1
+pandas==2.2.1
+numpy==1.26.4
+scikit-learn==1.4.1
+matplotlib==3.8.3
+seaborn==0.13.2
+plotly==5.18.0
+folium==0.16.0
+branca==0.7.0
+streamlit-folium==0.15.1
+python-dotenv==1.0.1
