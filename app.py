@@ -193,13 +193,9 @@ import plotly.express as px
 
 st.set_page_config(page_title="AI River Pollution — Maps & Animations", layout="wide")
 
-# ------------------------------
-# Utilities / Config
-# ------------------------------
-DATA_FILE = "RealisticSatelliteClusterData.csv"  # your saved dataset
+DATA_FILE = "RealisticSatelliteClusterData.csv" 
 OUT_FILE = "Clustered_River_Dataset.csv"
 
-# Synthetic station -> coords mapping (update if you have real lat/lon)
 STATION_COORDS = {
     "Station_1": (29.00, 78.00),
     "Station_2": (29.02, 78.02),
@@ -208,32 +204,25 @@ STATION_COORDS = {
     "Station_5": (29.08, 78.08),
 }
 
-PALETTE = px.colors.qualitative.Safe  # for consistent coloring
+PALETTE = px.colors.qualitative.Safe  
 
-# ------------------------------
-# Load dataset
-# ------------------------------
 @st.cache_data
 def load_data(path=DATA_FILE):
     df = pd.read_csv(path)
     # ensure Station_ID exists
     if "Station_ID" not in df.columns:
         df["Station_ID"] = np.random.choice(list(STATION_COORDS.keys()), size=len(df))
-    # add Lat/Lon if missing
     if ("Latitude" not in df.columns) or ("Longitude" not in df.columns):
         lat = []
         lon = []
         for s in df["Station_ID"].astype(str):
             coords = STATION_COORDS.get(s, (29.05, 78.05))
-            lat.append(coords[0] + np.random.normal(0, 0.0005))   # slight jitter
+            lat.append(coords[0] + np.random.normal(0, 0.0005))   
             lon.append(coords[1] + np.random.normal(0, 0.0005))
         df["Latitude"] = lat
         df["Longitude"] = lon
     return df
 
-# ------------------------------
-# DBSCAN (use your provided function)
-# ------------------------------
 def run_dbscan(df):
     features = df[["pH", "DO", "Temperature", "Turbidity", "Conductivity", "Nitrate"]]
     X = StandardScaler().fit_transform(features)
@@ -246,9 +235,6 @@ def run_dbscan(df):
     st.write(df["Cluster_Label"].value_counts())
     return df, X, labels
 
-# ------------------------------
-# Auto-labeling (simple rule-based)
-# ------------------------------
 def auto_label(df):
     cluster_labels = {}
     for c in df["Cluster_Label"].unique():
@@ -275,22 +261,15 @@ def auto_label(df):
     st.write(df["Auto_Label"].value_counts())
     return df
 
-# ------------------------------
-# Folium map generator
-# ------------------------------
 def folium_map(df):
-    # center map on mean coords
     center = [df["Latitude"].mean(), df["Longitude"].mean()]
     m = folium.Map(location=center, zoom_start=12, tiles="CartoDB positron")
 
-    # color map for labels
     unique_labels = df["Auto_Label"].unique().tolist()
     cmap = cm.linear.Set1_09.scale(0, max(1, len(unique_labels)))
     label_to_color = {lab: cmap(i) for i, lab in enumerate(unique_labels)}
 
     marker_cluster = MarkerCluster().add_to(m)
-
-    # add markers, size by turbidity, popup with info
     for _, row in df.iterrows():
         lab = row["Auto_Label"]
         color = label_to_color.get(lab, "#000000")
@@ -303,14 +282,13 @@ def folium_map(df):
         """
         folium.CircleMarker(
             location=(row["Latitude"], row["Longitude"]),
-            radius=max(4, min(12, row["Turbidity"] / 10)),  # size from turbidity
+            radius=max(4, min(12, row["Turbidity"] / 10)),  
             color=color,
             fill=True,
             fill_opacity=0.8,
             popup=folium.Popup(popup_html, max_width=300)
         ).add_to(marker_cluster)
 
-    # legend (basic)
     legend_html = "<div style='position: fixed; bottom: 50px; left: 50px; z-index:9999; background: white; padding: 10px; border-radius:5px;'>"
     for lab, col in label_to_color.items():
         legend_html += f"<div style='margin-bottom:4px;'><span style='background:{col};width:12px;height:12px;display:inline-block;margin-right:6px;'></span>{lab}</div>"
@@ -319,11 +297,7 @@ def folium_map(df):
 
     return m
 
-# ------------------------------
-# Animated Plotly graphs
-# ------------------------------
 def prepare_animation_frames(df, n_per_frame=20):
-    # create a 'frame' index so data progressively appears; preserves input order
     df2 = df.copy().reset_index(drop=True)
     df2["frame"] = (df2.index // n_per_frame).astype(int)
     return df2
@@ -341,7 +315,6 @@ def animated_conductivity_turbidity(df):
     return fig
 
 def animated_pca(df):
-    # run PCA on the 6 core features
     feats = ["pH", "DO", "Temperature", "Turbidity", "Conductivity", "Nitrate"]
     X = StandardScaler().fit_transform(df[feats])
     pca = PCA(n_components=2)
@@ -360,9 +333,6 @@ def animated_pca(df):
     fig.update_traces(marker=dict(size=7))
     return fig
 
-# ------------------------------
-# Heatmap (numeric only)
-# ------------------------------
 def draw_heatmap(df):
     numeric_df = df.select_dtypes(include=[np.number])
     fig, ax = plt.subplots(figsize=(12,8))
@@ -370,9 +340,6 @@ def draw_heatmap(df):
     ax.set_title("Feature Correlation (numeric features only)")
     return fig
 
-# ------------------------------
-# Main UI
-# ------------------------------
 st.title("🌊 AI River Pollution Detection — Maps & Animated Visuals")
 st.markdown("DBSCAN clustering + satellite features + animated graphs + folium map")
 
@@ -385,7 +352,6 @@ if st.sidebar.button("Run Clustering & Prepare Visuals"):
         df, X, labels = run_dbscan(df)
         df = auto_label(df)
 
-    # show silhouette
     mask = labels != -1
     if mask.sum() > 0 and len(set(labels[mask])) > 1:
         sil = silhouette_score(X[mask], labels[mask])
@@ -393,7 +359,6 @@ if st.sidebar.button("Run Clustering & Prepare Visuals"):
     else:
         st.warning("Not enough clusters for silhouette score")
 
-    # top row: cluster counts and download
     c1, c2, c3 = st.columns([1,1,1])
     with c1:
         st.subheader("Cluster Counts")
@@ -405,14 +370,10 @@ if st.sidebar.button("Run Clustering & Prepare Visuals"):
         st.subheader("Download")
         st.download_button("Download labeled dataset", data=df.to_csv(index=False), file_name=OUT_FILE, mime="text/csv")
 
-    # folium map
     st.subheader("📍 Pollution Map (Satellite / Stations)")
     m = folium_map(df)
-    # render folium map in streamlit
     folium_html = m._repr_html_()
     components.html(folium_html, height=600)
-
-    # animated plotly
     st.subheader("🎞 Animated Conductivity vs Turbidity")
     fig_anim = animated_conductivity_turbidity(df)
     st.plotly_chart(fig_anim, use_container_width=True)
@@ -421,7 +382,6 @@ if st.sidebar.button("Run Clustering & Prepare Visuals"):
     fig_pca_anim = animated_pca(df)
     st.plotly_chart(fig_pca_anim, use_container_width=True)
 
-    # static PCA + scatter + heatmap
     st.subheader("PCA 2D (static)")
     pca = PCA(n_components=2)
     pc = pca.fit_transform(X)
